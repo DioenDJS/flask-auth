@@ -67,6 +67,18 @@ def read_user(id_user):
 
     return jsonify({"message": "Usuario não encontrado"}), 404
 
+@app.route("/users", methods=["GET"])
+def get_users_all():
+    users = User.query.all()
+
+    if current_user.role != "admin":
+        return jsonify({"message": "Usuário sem premissão para lista usuários!"}), 403
+
+    if users:
+        return jsonify({
+            "users": [{"id":user.id, "name": user.username, "role": user.role} for user in users]
+        })
+
 @app.route("/user/<int:id_user>", methods=["PUT"])
 @login_required
 def update_user(id_user):

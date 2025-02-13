@@ -1,3 +1,5 @@
+from http.cookiejar import cut_port_re
+
 from flask import Flask, request, jsonify
 from models.user import User
 from database import db
@@ -49,7 +51,7 @@ def create_user():
     password = data.get("password")
 
     if username and password:
-        user = User(username=username, password=password)
+        user = User(username=username, password=password, role='user')
         db.session.add(user)
         db.session.commit()
         return jsonify({"message": "Usuario cadastrado com sucesso"})
@@ -72,6 +74,9 @@ def update_user(id_user):
     user = User.query.get(id_user)
     data = request.json
 
+    if id_user != current_user.id and current_user.role == "user":
+        return jsonify({"message": "Operação não permitida"}), 403
+
     if user and data.get("password"):
         user.password = data.get("password")
         db.session.commit()
@@ -84,6 +89,8 @@ def update_user(id_user):
 def delete_user(id_user):
     user = User.query.get(id_user)
 
+    if current_user.role != "admin":
+        return jsonify({"message": "Operação não permitida"}), 403
     if user.id == current_user.id:
         return jsonify({"message": "Deleção não permitida!"}), 403
 
@@ -93,6 +100,18 @@ def delete_user(id_user):
         return jsonify({"message": f"Usuário {id_user} deletado com sucesso"})
 
     return jsonify({"message": "Usuário não encontrado"}), 404
+
+@app.route("/me", methods=['GET'])
+@login_required
+def get_me_user():
+
+    user = User.query.get(current_user.id)
+
+    return {
+        "id":user.id,
+        "name": user.username,
+        "role": user.role
+    }
 
 if __name__ == '__main__':
     app.run(debug=True)
